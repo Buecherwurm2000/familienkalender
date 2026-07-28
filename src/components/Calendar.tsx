@@ -4,7 +4,7 @@ import { useState } from 'react'
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek,
   eachDayOfInterval, format, isSameMonth, isSameDay, isToday,
-  addMonths, subMonths, isWithinInterval, parseISO, isAfter, isBefore,
+  addMonths, subMonths, isWithinInterval, parseISO, getDay,
 } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -34,8 +34,22 @@ function isStartDay(event: Event, day: Date) {
 }
 
 function isEndDay(event: Event, day: Date) {
-  if (!event.end_date) return isSameDay(parseISO(event.date), day)
+  if (!event.end_date) return true
   return isSameDay(parseISO(event.end_date), day)
+}
+
+// Monday=0 … Sunday=6 (ISO week)
+function isoWeekday(day: Date) {
+  const d = getDay(day)
+  return d === 0 ? 6 : d - 1
+}
+
+function isWeekStart(day: Date) {
+  return isoWeekday(day) === 0
+}
+
+function isWeekEnd(day: Date) {
+  return isoWeekday(day) === 6
 }
 
 export default function Calendar({ events, onDayClick, onEventClick }: Props) {
@@ -94,37 +108,48 @@ export default function Calendar({ events, onDayClick, onEventClick }: Props) {
               `}>
                 {format(day, 'd')}
               </span>
+
               <div className="space-y-0.5">
                 {dayEvents.slice(0, 3).map(event => {
                   const multi = isMultiDay(event)
                   const start = isStartDay(event, day)
                   const end = isEndDay(event, day)
+                  const weekStart = isWeekStart(day)
+                  const weekEnd = isWeekEnd(day)
+
+                  // For multi-day: show title at start OR at every week start
+                  const showTitle = !multi || start || weekStart
+
+                  // Rounded ends: left if start or week-start, right if end or week-end
+                  const roundLeft = !multi || start || weekStart
+                  const roundRight = !multi || end || weekEnd
+
                   return (
                     <button
                       key={event.id}
                       onClick={e => { e.stopPropagation(); onEventClick(event) }}
-                      className={`w-full text-left text-xs py-0.5 text-white font-medium truncate block
-                        ${multi
-                          ? `px-1.5 ${start ? 'rounded-l-full pl-2' : ''} ${end ? 'rounded-r-full pr-2' : ''} ${!start && !end ? '' : ''}`
-                          : 'rounded px-1.5'
-                        }
+                      title={event.title}
+                      className={`w-full text-left text-xs py-0.5 font-medium block overflow-hidden
+                        ${roundLeft ? 'rounded-l-full pl-2' : 'pl-0.5'}
+                        ${roundRight ? 'rounded-r-full pr-2' : 'pr-0'}
+                        ${multi && !roundLeft ? '-ml-1' : ''}
+                        ${multi && !roundRight ? '-mr-1 w-[calc(100%+4px)]' : ''}
                       `}
                       style={{
                         backgroundColor: event.color,
-                        marginLeft: multi && !start ? '-2px' : undefined,
-                        marginRight: multi && !end ? '-2px' : undefined,
-                        opacity: inMonth ? 1 : 0.5,
+                        color: 'white',
+                        opacity: inMonth ? 1 : 0.4,
                       }}
                     >
-                      {start || !multi
-                        ? <>{event.time && !multi ? `${event.time} ` : ''}{event.title}</>
-                        : <span className="opacity-0 select-none">·</span>
+                      {showTitle
+                        ? <span className="truncate block">{!multi && event.time ? `${event.time} ` : ''}{event.title}</span>
+                        : <span className="opacity-0 select-none text-[10px]">·</span>
                       }
                     </button>
                   )
                 })}
                 {dayEvents.length > 3 && (
-                  <span className="text-xs text-gray-400 pl-1">+{dayEvents.length - 3} mehr</span>
+                  <span className="text-xs text-gray-400 pl-1">+{dayEvents.length - 3}</span>
                 )}
               </div>
             </div>

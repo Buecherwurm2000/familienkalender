@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { X, Trash2 } from 'lucide-react'
+import { X, Trash2, Calendar, Clock } from 'lucide-react'
 import type { Event } from '@/lib/supabase'
 
 type Member = { name: string; color: string }
@@ -18,122 +18,135 @@ type Props = {
 }
 
 export default function EventModal({ date, event, members, onSave, onDelete, onClose }: Props) {
+  const defaultStart = date ? format(date, 'yyyy-MM-dd') : ''
   const [title, setTitle] = useState(event?.title ?? '')
+  const [startDate, setStartDate] = useState(event?.date ?? defaultStart)
+  const [endDate, setEndDate] = useState(event?.end_date ?? defaultStart)
   const [time, setTime] = useState(event?.time ?? '')
-  const [endDate, setEndDate] = useState(event?.end_date ?? '')
-  const [member, setMember] = useState(event?.member ?? members[0].name)
+  const [member, setMember] = useState(event?.member ?? members[0]?.name ?? '')
   const [notes, setNotes] = useState(event?.notes ?? '')
-  const [multiDay, setMultiDay] = useState(!!event?.end_date)
 
   const selectedMember = members.find(m => m.name === member) ?? members[0]
-  const startDateStr = date ? format(date, 'yyyy-MM-dd') : ''
+  const isMultiDay = endDate && endDate > startDate
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!title.trim() || !date) return
+    if (!title.trim() || !startDate) return
     onSave({
       title: title.trim(),
-      date: startDateStr,
-      end_date: multiDay && endDate && endDate > startDateStr ? endDate : undefined,
-      time: !multiDay && time ? time : undefined,
+      date: startDate,
+      end_date: isMultiDay ? endDate : undefined,
+      time: !isMultiDay && time ? time : undefined,
       member,
       color: selectedMember.color,
       notes: notes || undefined,
     })
   }
 
+  function formatDisplayDate(d: string) {
+    if (!d) return ''
+    try { return format(parseISO(d), 'EEE, d. MMM', { locale: de }) }
+    catch { return d }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-800">
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3">
+          <h3 className="font-semibold text-gray-800 text-base">
             {event ? 'Termin bearbeiten' : 'Neuer Termin'}
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {event && (
-              <button
-                onClick={() => onDelete(event.id)}
-                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                title="Löschen"
-              >
+              <button onClick={() => onDelete(event.id)}
+                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                 <Trash2 size={16} />
               </button>
             )}
-            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors">
+            <button onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
               <X size={16} />
             </button>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          {date && (
-            <p className="text-sm text-gray-500 capitalize">
-              {format(date, 'EEEE, d. MMMM yyyy', { locale: de })}
-            </p>
-          )}
+        <form onSubmit={handleSubmit} className="px-5 pb-6 space-y-4">
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="z.B. Urlaub, Zahnarzt..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              required
-              autoFocus
-            />
+          {/* Titel */}
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Titel des Termins..."
+            className="w-full text-lg font-medium border-0 border-b-2 border-gray-200 focus:border-blue-400 px-0 py-2 focus:outline-none bg-transparent placeholder-gray-300"
+            required
+            autoFocus
+          />
+
+          {/* Datum-Block */}
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+
+            {/* Von */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: selectedMember?.color + '22' }}>
+                <Calendar size={15} style={{ color: selectedMember?.color }} />
+              </div>
+              <div className="flex-1 flex items-center gap-2">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-400 mb-0.5">Von</p>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => {
+                      setStartDate(e.target.value)
+                      if (endDate < e.target.value) setEndDate(e.target.value)
+                    }}
+                    className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full"
+                  />
+                </div>
+                {!isMultiDay && (
+                  <div className="flex items-center gap-1.5 text-gray-500">
+                    <Clock size={13} />
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={e => setTime(e.target.value)}
+                      className="text-sm bg-transparent border-0 focus:outline-none text-gray-600 w-24"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bis */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 flex-shrink-0 flex justify-center">
+                <div className="w-0.5 h-6 bg-gray-200 mx-auto" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 mb-0.5">Bis</p>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full"
+                />
+              </div>
+              {isMultiDay && (
+                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">
+                  mehrtägig
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* Mehrtägig Toggle */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMultiDay(false)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                !multiDay ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              Einzelner Tag
-            </button>
-            <button
-              type="button"
-              onClick={() => setMultiDay(true)}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
-                multiDay ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              Mehrtägig
-            </button>
-          </div>
-
-          {!multiDay && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit</label>
-              <input
-                type="time"
-                value={time}
-                onChange={e => setTime(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-          )}
-
-          {multiDay && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Enddatum</label>
-              <input
-                type="date"
-                value={endDate}
-                min={startDateStr}
-                onChange={e => setEndDate(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-          )}
-
+          {/* Person */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Person</label>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Person</p>
             <div className="flex flex-wrap gap-2">
               {members.map(m => (
                 <button
@@ -141,7 +154,7 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
                   type="button"
                   onClick={() => setMember(m.name)}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    member === m.name ? 'text-white shadow-md scale-105' : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                    member === m.name ? 'text-white shadow-sm' : 'text-gray-500 bg-gray-100 hover:bg-gray-200'
                   }`}
                   style={member === m.name ? { backgroundColor: m.color } : {}}
                 >
@@ -151,30 +164,24 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notizen</label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Zusätzliche Infos..."
-              rows={2}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-            />
-          </div>
+          {/* Notizen */}
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Notizen (optional)..."
+            rows={2}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none text-gray-600 placeholder-gray-300"
+          />
 
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2 px-4 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
+          {/* Buttons */}
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose}
+              className="flex-1 py-3 px-4 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
               Abbrechen
             </button>
-            <button
-              type="submit"
-              className="flex-1 py-2 px-4 text-sm font-medium text-white rounded-lg transition-colors"
-              style={{ backgroundColor: selectedMember.color }}
-            >
+            <button type="submit"
+              className="flex-1 py-3 px-4 text-sm font-medium text-white rounded-xl transition-colors"
+              style={{ backgroundColor: selectedMember?.color }}>
               {event ? 'Speichern' : 'Hinzufügen'}
             </button>
           </div>
