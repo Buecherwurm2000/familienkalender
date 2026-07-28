@@ -5,8 +5,9 @@ import { X, Plus, Trash2 } from 'lucide-react'
 import type { Member } from '@/app/page'
 
 const PRESET_COLORS = [
-  '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6',
-  '#ef4444', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
+  '#ef4444', '#f97316', '#f59e0b', '#84cc16',
+  '#10b981', '#06b6d4', '#3b82f6', '#6366f1',
+  '#8b5cf6', '#ec4899', '#64748b', '#000000',
 ]
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
 
 export default function MembersModal({ members, onSave, onClose }: Props) {
   const [list, setList] = useState<Member[]>(members.map(m => ({ ...m })))
+  const [openPicker, setOpenPicker] = useState<number | null>(null)
 
   function update(index: number, field: keyof Member, value: string) {
     setList(prev => prev.map((m, i) => i === index ? { ...m, [field]: value } : m))
@@ -30,6 +32,7 @@ export default function MembersModal({ members, onSave, onClose }: Props) {
 
   function removeMember(index: number) {
     setList(prev => prev.filter((_, i) => i !== index))
+    if (openPicker === index) setOpenPicker(null)
   }
 
   function handleSave() {
@@ -50,51 +53,50 @@ export default function MembersModal({ members, onSave, onClose }: Props) {
 
         <div className="px-6 py-4 space-y-3 max-h-[60vh] overflow-y-auto">
           {list.map((member, i) => (
-            <div key={i} className="flex items-center gap-3">
-              {/* Color picker */}
-              <div className="relative flex-shrink-0">
-                <input
-                  type="color"
-                  value={member.color}
-                  onChange={e => update(i, 'color', e.target.value)}
-                  className="sr-only"
-                  id={`color-${i}`}
-                />
-                <label
-                  htmlFor={`color-${i}`}
-                  className="block w-8 h-8 rounded-full cursor-pointer border-2 border-white shadow-md hover:scale-110 transition-transform"
+            <div key={i} className="space-y-2">
+              <div className="flex items-center gap-3">
+                {/* Farbkreis → öffnet Palette */}
+                <button
+                  type="button"
+                  onClick={() => setOpenPicker(openPicker === i ? null : i)}
+                  className="w-8 h-8 rounded-full flex-shrink-0 border-2 border-white shadow-md hover:scale-110 transition-transform"
                   style={{ backgroundColor: member.color }}
+                  title="Farbe wählen"
                 />
+
+                {/* Name */}
+                <input
+                  type="text"
+                  value={member.name}
+                  onChange={e => update(i, 'name', e.target.value)}
+                  placeholder="Name"
+                  className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+
+                <button
+                  onClick={() => removeMember(i)}
+                  className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
 
-              {/* Preset colors */}
-              <div className="flex gap-1 flex-wrap flex-1">
-                {PRESET_COLORS.slice(0, 5).map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => update(i, 'color', color)}
-                    className={`w-5 h-5 rounded-full transition-transform hover:scale-110 ${member.color === color ? 'ring-2 ring-offset-1 ring-gray-400' : ''}`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-
-              {/* Name input */}
-              <input
-                type="text"
-                value={member.name}
-                onChange={e => update(i, 'name', e.target.value)}
-                placeholder="Name"
-                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-
-              <button
-                onClick={() => removeMember(i)}
-                className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
-              >
-                <Trash2 size={14} />
-              </button>
+              {/* Farbpalette (12 Farben) */}
+              {openPicker === i && (
+                <div className="grid grid-cols-6 gap-2 p-3 bg-gray-50 rounded-xl ml-11">
+                  {PRESET_COLORS.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => { update(i, 'color', color); setOpenPicker(null) }}
+                      className={`w-8 h-8 rounded-full hover:scale-110 transition-transform ${
+                        member.color === color ? 'ring-2 ring-offset-2 ring-gray-500' : ''
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 
