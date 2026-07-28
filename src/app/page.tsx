@@ -9,25 +9,15 @@ import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Settings } from 'lucide-react'
 
-const DEFAULT_MEMBERS = [
-  { name: 'Mama', color: '#ec4899' },
-  { name: 'Papa', color: '#3b82f6' },
-  { name: 'Kind 1', color: '#10b981' },
-  { name: 'Kind 2', color: '#f59e0b' },
-  { name: 'Familie', color: '#8b5cf6' },
+export type Member = { id?: string; name: string; color: string; sort_order?: number }
+
+const DEFAULT_MEMBERS: Member[] = [
+  { name: 'Mama', color: '#ec4899', sort_order: 0 },
+  { name: 'Papa', color: '#3b82f6', sort_order: 1 },
+  { name: 'Kind 1', color: '#10b981', sort_order: 2 },
+  { name: 'Kind 2', color: '#f59e0b', sort_order: 3 },
+  { name: 'Familie', color: '#8b5cf6', sort_order: 4 },
 ]
-
-export type Member = { name: string; color: string }
-
-function loadMembers(): Member[] {
-  if (typeof window === 'undefined') return DEFAULT_MEMBERS
-  try {
-    const stored = localStorage.getItem('familyMembers')
-    return stored ? JSON.parse(stored) : DEFAULT_MEMBERS
-  } catch {
-    return DEFAULT_MEMBERS
-  }
-}
 
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([])
@@ -38,18 +28,25 @@ export default function Home() {
   const [showMembers, setShowMembers] = useState(false)
 
   useEffect(() => {
-    setMembers(loadMembers())
+    loadMembers()
     loadEvents()
 
     const channel = supabase
-      .channel('events')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
-        loadEvents()
-      })
+      .channel('realtime-all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, loadEvents)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, loadMembers)
       .subscribe()
 
     return () => { supabase.removeChannel(channel) }
   }, [])
+
+  async function loadMembers() {
+    const { data } = await supabase
+      .from('members')
+      .select('*')
+      .order('sort_order', { ascending: true })
+    if (data && data.length > 0) setMembers(data)
+  }
 
   async function loadEvents() {
     const { data } = await supabase
@@ -87,8 +84,12 @@ export default function Home() {
     loadEvents()
   }
 
-  function handleSaveMembers(updated: Member[]) {
-    localStorage.setItem('familyMembers', JSON.stringify(updated))
+  async function handleSaveMembers(updated: Member[]) {
+    // Alle bestehenden löschen und neu einfügen
+    await supabase.from('members').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('members').insert(
+      updated.map((m, i) => ({ name: m.name, color: m.color, sort_order: i }))
+    )
     setMembers(updated)
     setShowMembers(false)
   }
@@ -99,7 +100,7 @@ export default function Home() {
         <div>
           <h1 className="text-3xl font-bold text-gray-800">📅 Familienkalender</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {format(new Date(), "MMMM yyyy", { locale: de })}
+            {format(new Date(), 'MMMM yyyy', { locale: de })}
           </p>
         </div>
         <button
