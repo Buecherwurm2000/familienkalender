@@ -142,7 +142,6 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
                 ${isToday(day) ? 'bg-blue-500 text-white' : inMonth ? 'text-gray-700' : 'text-gray-300'}
                 ${inPreview && preview && !isToday(day) ? 'ring-2 ring-offset-1' : ''}
               `}
-                style={inPreview && preview && !isToday(day) ? { ringColor: preview.color } : {}}
               >
                 {format(day, 'd')}
               </span>
