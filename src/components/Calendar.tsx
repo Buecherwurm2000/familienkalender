@@ -90,12 +90,12 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
     const roundRight = !isMulti || isEnd || isWeekEnd(day)
     const showTitle = !isMulti || isStart || isWeekStart(day)
 
-    const Tag = onClick ? 'button' : 'div'
+    const Tag = onClick ? 'button' as const : 'div' as const
 
     return (
       <Tag
         key={key}
-        onClick={onClick}
+        {...(onClick ? { onClick } : {})}
         title={title}
         className={`w-full text-left text-[10px] leading-[14px] py-px font-medium block overflow-hidden
           ${roundLeft ? 'rounded-l-full pl-1.5' : 'pl-0.5'}
