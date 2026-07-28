@@ -50,10 +50,12 @@ function isWeekEnd(day: Date) { return isoWeekday(day) === 6 }
 
 function previewCoversDay(preview: Preview, day: Date): boolean {
   if (!preview) return false
-  const start = parseISO(preview.start)
-  const end = parseISO(preview.end)
-  const d = new Date(day.getFullYear(), day.getMonth(), day.getDate())
-  return isWithinInterval(d, { start, end })
+  try {
+    const start = parseISO(preview.start)
+    const end = parseISO(preview.end)
+    const d = new Date(day.getFullYear(), day.getMonth(), day.getDate())
+    return isWithinInterval(d, { start, end })
+  } catch { return false }
 }
 
 export default function Calendar({ events, preview, onDayClick, onEventClick }: Props) {
@@ -67,6 +69,53 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
 
   function eventsForDay(day: Date) {
     return events.filter(e => eventCoversDay(e, day))
+  }
+
+  // Render a single event/preview bar
+  function renderBar(opts: {
+    key: string
+    color: string
+    title: string
+    time?: string
+    isStart: boolean
+    isEnd: boolean
+    isMulti: boolean
+    isPreview: boolean
+    inMonth: boolean
+    day: Date
+    onClick?: (e: React.MouseEvent) => void
+  }) {
+    const { key, color, title, time, isStart, isEnd, isMulti, isPreview, inMonth, day, onClick } = opts
+    const roundLeft = !isMulti || isStart || isWeekStart(day)
+    const roundRight = !isMulti || isEnd || isWeekEnd(day)
+    const showTitle = !isMulti || isStart || isWeekStart(day)
+
+    const Tag = onClick ? 'button' : 'div'
+
+    return (
+      <Tag
+        key={key}
+        onClick={onClick}
+        title={title}
+        className={`w-full text-left text-xs py-0.5 font-medium block overflow-hidden
+          ${roundLeft ? 'rounded-l-full pl-2' : 'pl-0.5'}
+          ${roundRight ? 'rounded-r-full pr-2' : 'pr-0'}
+          ${isPreview ? 'opacity-60' : ''}
+        `}
+        style={{
+          backgroundColor: color,
+          color: 'white',
+          opacity: isPreview ? 0.65 : inMonth ? 1 : 0.4,
+          outline: isPreview ? `2px dashed ${color}` : undefined,
+          outlineOffset: isPreview ? '1px' : undefined,
+        }}
+      >
+        {showTitle
+          ? <span className="truncate block">{!isMulti && time ? `${time} ` : ''}{title}</span>
+          : <span className="opacity-0 select-none text-[10px]">·</span>
+        }
+      </Tag>
+    )
   }
 
   return (
@@ -99,80 +148,54 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
           const dayEvents = eventsForDay(day)
           const inMonth = isSameMonth(day, currentMonth)
           const inPreview = previewCoversDay(preview, day)
-          const previewStart = preview ? isSameDay(parseISO(preview.start), day) : false
-          const previewEnd = preview ? isSameDay(parseISO(preview.end), day) : false
-          const previewSingle = preview ? preview.start === preview.end : false
+          const previewIsMulti = preview ? preview.start !== preview.end : false
 
           return (
             <div
               key={i}
               onClick={() => onDayClick(day)}
-              className={`min-h-[90px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors relative
+              className={`min-h-[90px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors
                 ${inMonth ? 'bg-white hover:bg-blue-50' : 'bg-gray-50'}
                 ${isToday(day) ? 'ring-2 ring-inset ring-blue-400' : ''}
               `}
             >
-              {/* Preview highlight strip at top of cell */}
-              {inPreview && preview && (
-                <div
-                  className="absolute top-0 left-0 right-0 h-1"
-                  style={{
-                    backgroundColor: preview.color,
-                    opacity: 0.5,
-                    borderRadius: previewSingle
-                      ? '4px'
-                      : previewStart
-                        ? '4px 0 0 4px'
-                        : previewEnd
-                          ? '0 4px 4px 0'
-                          : '0',
-                  }}
-                />
-              )}
-
-              {/* Background tint for preview range */}
-              {inPreview && preview && (
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ backgroundColor: preview.color, opacity: 0.07 }}
-                />
-              )}
-
-              <span className={`relative text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full mb-1
+              <span className={`text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full mb-1
                 ${isToday(day) ? 'bg-blue-500 text-white' : inMonth ? 'text-gray-700' : 'text-gray-300'}
-                ${inPreview && preview && !isToday(day) ? 'ring-2 ring-offset-1' : ''}
-              `}
-              >
+              `}>
                 {format(day, 'd')}
               </span>
 
-              <div className="relative space-y-0.5">
-                {dayEvents.slice(0, 3).map(event => {
-                  const multi = isMultiDay(event)
-                  const start = isStartDay(event, day)
-                  const end = isEndDay(event, day)
-                  const roundLeft = !multi || start || isWeekStart(day)
-                  const roundRight = !multi || end || isWeekEnd(day)
-                  const showTitle = !multi || start || isWeekStart(day)
+              <div className="space-y-0.5">
+                {/* Saved events */}
+                {dayEvents.slice(0, 3).map(event =>
+                  renderBar({
+                    key: event.id,
+                    color: event.color,
+                    title: event.title,
+                    time: event.time,
+                    isStart: isStartDay(event, day),
+                    isEnd: isEndDay(event, day),
+                    isMulti: isMultiDay(event),
+                    isPreview: false,
+                    inMonth,
+                    day,
+                    onClick: e => { e.stopPropagation(); onEventClick(event) },
+                  })
+                )}
 
-                  return (
-                    <button
-                      key={event.id}
-                      onClick={e => { e.stopPropagation(); onEventClick(event) }}
-                      title={event.title}
-                      className={`w-full text-left text-xs py-0.5 font-medium block overflow-hidden
-                        ${roundLeft ? 'rounded-l-full pl-2' : 'pl-0.5'}
-                        ${roundRight ? 'rounded-r-full pr-2' : 'pr-0'}
-                      `}
-                      style={{ backgroundColor: event.color, color: 'white', opacity: inMonth ? 1 : 0.4 }}
-                    >
-                      {showTitle
-                        ? <span className="truncate block">{!multi && event.time ? `${event.time} ` : ''}{event.title}</span>
-                        : <span className="opacity-0 select-none text-[10px]">·</span>
-                      }
-                    </button>
-                  )
+                {/* Preview bar */}
+                {inPreview && preview && renderBar({
+                  key: 'preview',
+                  color: preview.color,
+                  title: 'Neuer Termin',
+                  isStart: isSameDay(parseISO(preview.start), day),
+                  isEnd: isSameDay(parseISO(preview.end), day),
+                  isMulti: previewIsMulti,
+                  isPreview: true,
+                  inMonth,
+                  day,
                 })}
+
                 {dayEvents.length > 3 && (
                   <span className="text-xs text-gray-400 pl-1">+{dayEvents.length - 3}</span>
                 )}
