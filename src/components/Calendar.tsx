@@ -9,11 +9,13 @@ import {
 import { de } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { Event } from '@/lib/supabase'
+import type { Preview } from '@/app/page'
 
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 type Props = {
   events: Event[]
+  preview: Preview
   onDayClick: (date: Date) => void
   onEventClick: (event: Event) => void
 }
@@ -38,21 +40,23 @@ function isEndDay(event: Event, day: Date) {
   return isSameDay(parseISO(event.end_date), day)
 }
 
-// Monday=0 … Sunday=6 (ISO week)
 function isoWeekday(day: Date) {
   const d = getDay(day)
   return d === 0 ? 6 : d - 1
 }
 
-function isWeekStart(day: Date) {
-  return isoWeekday(day) === 0
+function isWeekStart(day: Date) { return isoWeekday(day) === 0 }
+function isWeekEnd(day: Date) { return isoWeekday(day) === 6 }
+
+function previewCoversDay(preview: Preview, day: Date): boolean {
+  if (!preview) return false
+  const start = parseISO(preview.start)
+  const end = parseISO(preview.end)
+  const d = new Date(day.getFullYear(), day.getMonth(), day.getDate())
+  return isWithinInterval(d, { start, end })
 }
 
-function isWeekEnd(day: Date) {
-  return isoWeekday(day) === 6
-}
-
-export default function Calendar({ events, onDayClick, onEventClick }: Props) {
+export default function Calendar({ events, preview, onDayClick, onEventClick }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
   const monthStart = startOfMonth(currentMonth)
@@ -94,35 +98,63 @@ export default function Calendar({ events, onDayClick, onEventClick }: Props) {
         {days.map((day, i) => {
           const dayEvents = eventsForDay(day)
           const inMonth = isSameMonth(day, currentMonth)
+          const inPreview = previewCoversDay(preview, day)
+          const previewStart = preview ? isSameDay(parseISO(preview.start), day) : false
+          const previewEnd = preview ? isSameDay(parseISO(preview.end), day) : false
+          const previewSingle = preview ? preview.start === preview.end : false
+
           return (
             <div
               key={i}
               onClick={() => onDayClick(day)}
-              className={`min-h-[90px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors
+              className={`min-h-[90px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors relative
                 ${inMonth ? 'bg-white hover:bg-blue-50' : 'bg-gray-50'}
                 ${isToday(day) ? 'ring-2 ring-inset ring-blue-400' : ''}
               `}
             >
-              <span className={`text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full mb-1
+              {/* Preview highlight strip at top of cell */}
+              {inPreview && preview && (
+                <div
+                  className="absolute top-0 left-0 right-0 h-1"
+                  style={{
+                    backgroundColor: preview.color,
+                    opacity: 0.5,
+                    borderRadius: previewSingle
+                      ? '4px'
+                      : previewStart
+                        ? '4px 0 0 4px'
+                        : previewEnd
+                          ? '0 4px 4px 0'
+                          : '0',
+                  }}
+                />
+              )}
+
+              {/* Background tint for preview range */}
+              {inPreview && preview && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ backgroundColor: preview.color, opacity: 0.07 }}
+                />
+              )}
+
+              <span className={`relative text-xs font-medium inline-flex w-6 h-6 items-center justify-center rounded-full mb-1
                 ${isToday(day) ? 'bg-blue-500 text-white' : inMonth ? 'text-gray-700' : 'text-gray-300'}
-              `}>
+                ${inPreview && preview && !isToday(day) ? 'ring-2 ring-offset-1' : ''}
+              `}
+                style={inPreview && preview && !isToday(day) ? { ringColor: preview.color } : {}}
+              >
                 {format(day, 'd')}
               </span>
 
-              <div className="space-y-0.5">
+              <div className="relative space-y-0.5">
                 {dayEvents.slice(0, 3).map(event => {
                   const multi = isMultiDay(event)
                   const start = isStartDay(event, day)
                   const end = isEndDay(event, day)
-                  const weekStart = isWeekStart(day)
-                  const weekEnd = isWeekEnd(day)
-
-                  // For multi-day: show title at start OR at every week start
-                  const showTitle = !multi || start || weekStart
-
-                  // Rounded ends: left if start or week-start, right if end or week-end
-                  const roundLeft = !multi || start || weekStart
-                  const roundRight = !multi || end || weekEnd
+                  const roundLeft = !multi || start || isWeekStart(day)
+                  const roundRight = !multi || end || isWeekEnd(day)
+                  const showTitle = !multi || start || isWeekStart(day)
 
                   return (
                     <button
@@ -132,14 +164,8 @@ export default function Calendar({ events, onDayClick, onEventClick }: Props) {
                       className={`w-full text-left text-xs py-0.5 font-medium block overflow-hidden
                         ${roundLeft ? 'rounded-l-full pl-2' : 'pl-0.5'}
                         ${roundRight ? 'rounded-r-full pr-2' : 'pr-0'}
-                        ${multi && !roundLeft ? '-ml-1' : ''}
-                        ${multi && !roundRight ? '-mr-1 w-[calc(100%+4px)]' : ''}
                       `}
-                      style={{
-                        backgroundColor: event.color,
-                        color: 'white',
-                        opacity: inMonth ? 1 : 0.4,
-                      }}
+                      style={{ backgroundColor: event.color, color: 'white', opacity: inMonth ? 1 : 0.4 }}
                     >
                       {showTitle
                         ? <span className="truncate block">{!multi && event.time ? `${event.time} ` : ''}{event.title}</span>

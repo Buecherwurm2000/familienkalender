@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { X, Trash2, Calendar, Clock } from 'lucide-react'
 import type { Event } from '@/lib/supabase'
+import type { Preview } from '@/app/page'
 
 type Member = { name: string; color: string }
 
@@ -15,9 +16,10 @@ type Props = {
   onSave: (data: Omit<Event, 'id' | 'created_at'>) => void
   onDelete: (id: string) => void
   onClose: () => void
+  onPreviewChange: (preview: Preview) => void
 }
 
-export default function EventModal({ date, event, members, onSave, onDelete, onClose }: Props) {
+export default function EventModal({ date, event, members, onSave, onDelete, onClose, onPreviewChange }: Props) {
   const defaultStart = date ? format(date, 'yyyy-MM-dd') : ''
   const [title, setTitle] = useState(event?.title ?? '')
   const [startDate, setStartDate] = useState(event?.date ?? defaultStart)
@@ -28,6 +30,15 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
 
   const selectedMember = members.find(m => m.name === member) ?? members[0]
   const isMultiDay = endDate && endDate > startDate
+
+  // Notify calendar of current selection whenever dates or member change
+  useEffect(() => {
+    onPreviewChange({
+      start: startDate,
+      end: endDate || startDate,
+      color: selectedMember?.color ?? '#3b82f6',
+    })
+  }, [startDate, endDate, member])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -41,12 +52,6 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
       color: selectedMember.color,
       notes: notes || undefined,
     })
-  }
-
-  function formatDisplayDate(d: string) {
-    if (!d) return ''
-    try { return format(parseISO(d), 'EEE, d. MMM', { locale: de }) }
-    catch { return d }
   }
 
   return (
@@ -91,7 +96,7 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
             {/* Von */}
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: selectedMember?.color + '22' }}>
+                style={{ backgroundColor: (selectedMember?.color ?? '#3b82f6') + '22' }}>
                 <Calendar size={15} style={{ color: selectedMember?.color }} />
               </div>
               <div className="flex-1 flex items-center gap-2">
@@ -121,26 +126,33 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
               </div>
             </div>
 
-            {/* Bis */}
+            {/* Trennlinie */}
             <div className="flex items-center gap-3">
               <div className="w-8 flex-shrink-0 flex justify-center">
-                <div className="w-0.5 h-6 bg-gray-200 mx-auto" />
+                <div className="w-0.5 h-4 bg-gray-200" />
               </div>
-              <div className="flex-1">
-                <p className="text-xs text-gray-400 mb-0.5">Bis</p>
-                <input
-                  type="date"
-                  value={endDate}
-                  min={startDate}
-                  onChange={e => setEndDate(e.target.value)}
-                  className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full"
-                />
+            </div>
+
+            {/* Bis */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 flex-shrink-0" />
+              <div className="flex-1 flex items-center gap-2">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-400 mb-0.5">Bis</p>
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full"
+                  />
+                </div>
+                {isMultiDay && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium whitespace-nowrap">
+                    mehrtägig
+                  </span>
+                )}
               </div>
-              {isMultiDay && (
-                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">
-                  mehrtägig
-                </span>
-              )}
             </div>
           </div>
 

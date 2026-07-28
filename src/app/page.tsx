@@ -19,6 +19,8 @@ const DEFAULT_MEMBERS: Member[] = [
   { name: 'Familie', color: '#8b5cf6', sort_order: 4 },
 ]
 
+export type Preview = { start: string; end: string; color: string } | null
+
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([])
   const [members, setMembers] = useState<Member[]>(DEFAULT_MEMBERS)
@@ -26,6 +28,7 @@ export default function Home() {
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
+  const [preview, setPreview] = useState<Preview>(null)
 
   useEffect(() => {
     loadMembers()
@@ -74,18 +77,19 @@ export default function Home() {
     } else {
       await supabase.from('events').insert(data)
     }
+    setPreview(null)
     setShowModal(false)
     loadEvents()
   }
 
   async function handleDelete(id: string) {
     await supabase.from('events').delete().eq('id', id)
+    setPreview(null)
     setShowModal(false)
     loadEvents()
   }
 
   async function handleSaveMembers(updated: Member[]) {
-    // Alle bestehenden löschen und neu einfügen
     await supabase.from('members').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('members').insert(
       updated.map((m, i) => ({ name: m.name, color: m.color, sort_order: i }))
@@ -115,6 +119,7 @@ export default function Home() {
 
       <Calendar
         events={events}
+        preview={preview}
         onDayClick={handleDayClick}
         onEventClick={handleEventClick}
       />
@@ -126,7 +131,8 @@ export default function Home() {
           members={members}
           onSave={handleSave}
           onDelete={handleDelete}
-          onClose={() => setShowModal(false)}
+          onPreviewChange={setPreview}
+          onClose={() => { setPreview(null); setShowModal(false) }}
         />
       )}
 
