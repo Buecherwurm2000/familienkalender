@@ -43,11 +43,12 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim() || !startDate) return
+    const multi = endDate && endDate > startDate
     onSave({
       title: title.trim(),
       date: startDate,
-      end_date: isMultiDay ? endDate : undefined,
-      time: !isMultiDay && time ? time : undefined,
+      end_date: multi ? endDate : undefined,
+      time: !multi && time ? time : undefined,
       member,
       color: selectedMember.color,
       notes: notes || undefined,

@@ -9,10 +9,10 @@ export type Event = {
   id: string
   title: string
   date: string
-  end_date?: string
-  time?: string
+  end_date?: string | null
+  time?: string | null
   member: string
   color: string
-  notes?: string
+  notes?: string | null
   created_at: string
 }
