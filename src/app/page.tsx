@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import { supabase, type Event } from '@/lib/supabase'
 import Calendar from '@/components/Calendar'
 import EventModal from '@/components/EventModal'
+import MembersModal from '@/components/MembersModal'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
+import { Settings } from 'lucide-react'
 
-const FAMILY_MEMBERS = [
+const DEFAULT_MEMBERS = [
   { name: 'Mama', color: '#ec4899' },
   { name: 'Papa', color: '#3b82f6' },
   { name: 'Kind 1', color: '#10b981' },
@@ -15,13 +17,28 @@ const FAMILY_MEMBERS = [
   { name: 'Familie', color: '#8b5cf6' },
 ]
 
+export type Member = { name: string; color: string }
+
+function loadMembers(): Member[] {
+  if (typeof window === 'undefined') return DEFAULT_MEMBERS
+  try {
+    const stored = localStorage.getItem('familyMembers')
+    return stored ? JSON.parse(stored) : DEFAULT_MEMBERS
+  } catch {
+    return DEFAULT_MEMBERS
+  }
+}
+
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([])
+  const [members, setMembers] = useState<Member[]>(DEFAULT_MEMBERS)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [showMembers, setShowMembers] = useState(false)
 
   useEffect(() => {
+    setMembers(loadMembers())
     loadEvents()
 
     const channel = supabase
@@ -70,6 +87,12 @@ export default function Home() {
     loadEvents()
   }
 
+  function handleSaveMembers(updated: Member[]) {
+    localStorage.setItem('familyMembers', JSON.stringify(updated))
+    setMembers(updated)
+    setShowMembers(false)
+  }
+
   return (
     <main className="max-w-5xl mx-auto px-4 py-6">
       <header className="mb-6 flex items-center justify-between">
@@ -79,17 +102,14 @@ export default function Home() {
             {format(new Date(), "MMMM yyyy", { locale: de })}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {FAMILY_MEMBERS.map(m => (
-            <span
-              key={m.name}
-              className="px-3 py-1 rounded-full text-white text-xs font-medium"
-              style={{ backgroundColor: m.color }}
-            >
-              {m.name}
-            </span>
-          ))}
-        </div>
+        <button
+          onClick={() => setShowMembers(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-medium transition-colors"
+          title="Familienmitglieder verwalten"
+        >
+          <Settings size={16} />
+          Mitglieder
+        </button>
       </header>
 
       <Calendar
@@ -102,10 +122,18 @@ export default function Home() {
         <EventModal
           date={selectedDate}
           event={editEvent}
-          members={FAMILY_MEMBERS}
+          members={members}
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {showMembers && (
+        <MembersModal
+          members={members}
+          onSave={handleSaveMembers}
+          onClose={() => setShowMembers(false)}
         />
       )}
     </main>
