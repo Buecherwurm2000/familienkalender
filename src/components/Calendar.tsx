@@ -97,9 +97,9 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
         key={key}
         onClick={onClick}
         title={title}
-        className={`w-full text-left text-xs py-0.5 font-medium block overflow-hidden
-          ${roundLeft ? 'rounded-l-full pl-2' : 'pl-0.5'}
-          ${roundRight ? 'rounded-r-full pr-2' : 'pr-0'}
+        className={`w-full text-left text-[10px] leading-[14px] py-px font-medium block overflow-hidden
+          ${roundLeft ? 'rounded-l-full pl-1.5' : 'pl-0.5'}
+          ${roundRight ? 'rounded-r-full pr-1.5' : 'pr-0'}
           ${isPreview ? 'opacity-60' : ''}
         `}
         style={{
@@ -154,7 +154,7 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
             <div
               key={i}
               onClick={() => onDayClick(day)}
-              className={`min-h-[90px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors
+              className={`min-h-[110px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors
                 ${inMonth ? 'bg-white hover:bg-blue-50' : 'bg-gray-50'}
                 ${isToday(day) ? 'ring-2 ring-inset ring-blue-400' : ''}
               `}
@@ -165,9 +165,9 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
                 {format(day, 'd')}
               </span>
 
-              <div className="space-y-0.5">
+              <div className="space-y-px">
                 {/* Saved events */}
-                {dayEvents.slice(0, 3).map(event =>
+                {dayEvents.slice(0, 6).map(event =>
                   renderBar({
                     key: event.id,
                     color: event.color,
@@ -196,8 +196,8 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
                   day,
                 })}
 
-                {dayEvents.length > 3 && (
-                  <span className="text-xs text-gray-400 pl-1">+{dayEvents.length - 3}</span>
+                {dayEvents.length > 6 && (
+                  <span className="text-xs text-gray-400 pl-1">+{dayEvents.length - 6}</span>
                 )}
               </div>
             </div>
