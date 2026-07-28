@@ -20,18 +20,22 @@ type Props = {
 export default function EventModal({ date, event, members, onSave, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(event?.title ?? '')
   const [time, setTime] = useState(event?.time ?? '')
+  const [endDate, setEndDate] = useState(event?.end_date ?? '')
   const [member, setMember] = useState(event?.member ?? members[0].name)
   const [notes, setNotes] = useState(event?.notes ?? '')
+  const [multiDay, setMultiDay] = useState(!!event?.end_date)
 
   const selectedMember = members.find(m => m.name === member) ?? members[0]
+  const startDateStr = date ? format(date, 'yyyy-MM-dd') : ''
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim() || !date) return
     onSave({
       title: title.trim(),
-      date: format(date, 'yyyy-MM-dd'),
-      time: time || undefined,
+      date: startDateStr,
+      end_date: multiDay && endDate && endDate > startDateStr ? endDate : undefined,
+      time: !multiDay && time ? time : undefined,
       member,
       color: selectedMember.color,
       notes: notes || undefined,
@@ -41,7 +45,6 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        {/* Modal header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h3 className="font-semibold text-gray-800">
             {event ? 'Termin bearbeiten' : 'Neuer Termin'}
@@ -75,22 +78,59 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="z.B. Zahnarzt, Fußballtraining..."
+              placeholder="z.B. Urlaub, Zahnarzt..."
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
               autoFocus
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit</label>
-            <input
-              type="time"
-              value={time}
-              onChange={e => setTime(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-            />
+          {/* Mehrtägig Toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMultiDay(false)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                !multiDay ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              Einzelner Tag
+            </button>
+            <button
+              type="button"
+              onClick={() => setMultiDay(true)}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                multiDay ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              Mehrtägig
+            </button>
           </div>
+
+          {!multiDay && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit</label>
+              <input
+                type="time"
+                value={time}
+                onChange={e => setTime(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+          )}
+
+          {multiDay && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Enddatum</label>
+              <input
+                type="date"
+                value={endDate}
+                min={startDateStr}
+                onChange={e => setEndDate(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Person</label>
