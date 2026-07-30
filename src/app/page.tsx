@@ -120,7 +120,7 @@ export default function Home() {
     <main className="max-w-5xl mx-auto px-4 py-6">
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">📅 Familienkalender</h1>
+          <h1 className="text-3xl font-bold text-gray-800">Familienkalender</h1>
           <p className="text-gray-500 text-sm mt-1">
             {format(new Date(), 'MMMM yyyy', { locale: de })}
           </p>
