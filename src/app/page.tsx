@@ -19,7 +19,7 @@ const DEFAULT_MEMBERS: Member[] = [
   { name: 'Familie', color: '#8b5cf6', sort_order: 4 },
 ]
 
-export type Preview = { start: string; end: string; color: string } | null
+export type Preview = { start: string; end: string; color: string; colors?: string[] } | null
 
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([])

@@ -58,6 +58,14 @@ function previewCoversDay(preview: Preview, day: Date): boolean {
   } catch { return false }
 }
 
+function makeGradient(colors: string[]): string {
+  if (!colors || colors.length === 0) return '#3b82f6'
+  if (colors.length === 1) return colors[0]
+  const step = 100 / colors.length
+  const stops = colors.map((c, i) => `${c} ${i * step}%, ${c} ${(i + 1) * step}%`)
+  return `linear-gradient(90deg, ${stops.join(', ')})`
+}
+
 export default function Calendar({ events, preview, onDayClick, onEventClick }: Props) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
@@ -71,12 +79,11 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
     return events.filter(e => eventCoversDay(e, day))
   }
 
-  // Render a single event/preview bar
   function renderBar(opts: {
     key: string
-    color: string
+    colors: string[]
     title: string
-    time?: string
+    time?: string | null
     isStart: boolean
     isEnd: boolean
     isMulti: boolean
@@ -85,10 +92,11 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
     day: Date
     onClick?: (e: React.MouseEvent) => void
   }) {
-    const { key, color, title, time, isStart, isEnd, isMulti, isPreview, inMonth, day, onClick } = opts
+    const { key, colors, title, time, isStart, isEnd, isMulti, isPreview, inMonth, day, onClick } = opts
     const roundLeft = !isMulti || isStart || isWeekStart(day)
     const roundRight = !isMulti || isEnd || isWeekEnd(day)
     const showTitle = !isMulti || isStart || isWeekStart(day)
+    const bg = makeGradient(colors)
 
     const Tag = onClick ? 'button' as const : 'div' as const
 
@@ -98,15 +106,19 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
         {...(onClick ? { onClick } : {})}
         title={title}
         className={`w-full text-left text-[10px] leading-[14px] py-px font-medium block overflow-hidden
-          ${roundLeft ? 'rounded-l-full pl-1.5' : 'pl-0.5'}
-          ${roundRight ? 'rounded-r-full pr-1.5' : 'pr-0'}
-          ${isPreview ? 'opacity-60' : ''}
+          ${roundLeft ? 'rounded-l-full pl-1.5' : ''}
+          ${roundRight ? 'rounded-r-full pr-1.5' : ''}
         `}
         style={{
-          backgroundColor: color,
+          background: bg,
           color: 'white',
           opacity: isPreview ? 0.65 : inMonth ? 1 : 0.4,
-          outline: isPreview ? `2px dashed ${color}` : undefined,
+          // stretch seamlessly across cell borders for multi-day
+          marginLeft: isMulti && !roundLeft ? '-4px' : undefined,
+          marginRight: isMulti && !roundRight ? '-4px' : undefined,
+          paddingLeft: isMulti && !roundLeft ? '4px' : undefined,
+          paddingRight: isMulti && !roundRight ? '4px' : undefined,
+          outline: isPreview ? `2px dashed ${colors[0]}` : undefined,
           outlineOffset: isPreview ? '1px' : undefined,
         }}
       >
@@ -142,7 +154,7 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
         ))}
       </div>
 
-      {/* Days grid */}
+      {/* Days grid — overflow-hidden on the grid so bars can bleed edge-to-edge */}
       <div className="grid grid-cols-7">
         {days.map((day, i) => {
           const dayEvents = eventsForDay(day)
@@ -154,7 +166,7 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
             <div
               key={i}
               onClick={() => onDayClick(day)}
-              className={`min-h-[110px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors
+              className={`min-h-[110px] p-1 border-b border-r border-gray-50 cursor-pointer transition-colors overflow-hidden
                 ${inMonth ? 'bg-white hover:bg-blue-50' : 'bg-gray-50'}
                 ${isToday(day) ? 'ring-2 ring-inset ring-blue-400' : ''}
               `}
@@ -166,11 +178,10 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
               </span>
 
               <div className="space-y-px">
-                {/* Saved events */}
                 {dayEvents.slice(0, 6).map(event =>
                   renderBar({
                     key: event.id,
-                    color: event.color,
+                    colors: event.colors?.length ? event.colors : [event.color],
                     title: event.title,
                     time: event.time,
                     isStart: isStartDay(event, day),
@@ -183,10 +194,9 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
                   })
                 )}
 
-                {/* Preview bar */}
                 {inPreview && preview && renderBar({
                   key: 'preview',
-                  color: preview.color,
+                  colors: preview.colors?.length ? preview.colors : [preview.color],
                   title: 'Neuer Termin',
                   isStart: isSameDay(parseISO(preview.start), day),
                   isEnd: isSameDay(parseISO(preview.end), day),

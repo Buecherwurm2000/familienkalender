@@ -12,7 +12,9 @@ export type Event = {
   end_date?: string | null
   time?: string | null
   member: string
+  members?: string[] | null
   color: string
+  colors?: string[] | null
   notes?: string | null
   created_at: string
 }

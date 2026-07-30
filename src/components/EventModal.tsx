@@ -19,26 +19,50 @@ type Props = {
   onPreviewChange: (preview: Preview) => void
 }
 
+function makeGradient(colors: string[]): string {
+  if (colors.length === 0) return '#3b82f6'
+  if (colors.length === 1) return colors[0]
+  const step = 100 / colors.length
+  const stops = colors.map((c, i) => `${c} ${i * step}%, ${c} ${(i + 1) * step}%`)
+  return `linear-gradient(90deg, ${stops.join(', ')})`
+}
+
 export default function EventModal({ date, event, members, onSave, onDelete, onClose, onPreviewChange }: Props) {
   const defaultStart = date ? format(date, 'yyyy-MM-dd') : ''
+
+  const initialMembers = event?.members?.length
+    ? event.members
+    : event?.member
+      ? [event.member]
+      : [members[0]?.name ?? '']
+
   const [title, setTitle] = useState(event?.title ?? '')
   const [startDate, setStartDate] = useState(event?.date ?? defaultStart)
   const [endDate, setEndDate] = useState(event?.end_date ?? defaultStart)
   const [time, setTime] = useState(event?.time ?? '')
-  const [member, setMember] = useState(event?.member ?? members[0]?.name ?? '')
+  const [selectedMembers, setSelectedMembers] = useState<string[]>(initialMembers)
   const [notes, setNotes] = useState(event?.notes ?? '')
 
-  const selectedMember = members.find(m => m.name === member) ?? members[0]
   const isMultiDay = endDate && endDate > startDate
+  const selectedColors = selectedMembers.map(name => members.find(m => m.name === name)?.color ?? '#3b82f6')
+  const firstColor = selectedColors[0] ?? '#3b82f6'
 
-  // Notify calendar of current selection whenever dates or member change
+  function toggleMember(name: string) {
+    setSelectedMembers(prev =>
+      prev.includes(name)
+        ? prev.length > 1 ? prev.filter(n => n !== name) : prev
+        : [...prev, name]
+    )
+  }
+
   useEffect(() => {
     onPreviewChange({
       start: startDate,
       end: endDate || startDate,
-      color: selectedMember?.color ?? '#3b82f6',
+      color: firstColor,
+      colors: selectedColors,
     })
-  }, [startDate, endDate, member])
+  }, [startDate, endDate, selectedMembers.join(',')])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -49,8 +73,10 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
       date: startDate,
       end_date: multi ? endDate : undefined,
       time: !multi && time ? time : undefined,
-      member,
-      color: selectedMember.color,
+      member: selectedMembers[0],
+      members: selectedMembers,
+      color: firstColor,
+      colors: selectedColors,
       notes: notes || undefined,
     })
   }
@@ -93,60 +119,42 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
 
           {/* Datum-Block */}
           <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-
-            {/* Von */}
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: (selectedMember?.color ?? '#3b82f6') + '22' }}>
-                <Calendar size={15} style={{ color: selectedMember?.color }} />
+                style={{ background: makeGradient(selectedColors) }}>
+                <Calendar size={15} className="text-white" />
               </div>
               <div className="flex-1 flex items-center gap-2">
                 <div className="flex-1">
                   <p className="text-xs text-gray-400 mb-0.5">Von</p>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={e => {
-                      setStartDate(e.target.value)
-                      if (endDate < e.target.value) setEndDate(e.target.value)
-                    }}
-                    className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full"
-                  />
+                  <input type="date" value={startDate}
+                    onChange={e => { setStartDate(e.target.value); if (endDate < e.target.value) setEndDate(e.target.value) }}
+                    className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full" />
                 </div>
                 {!isMultiDay && (
                   <div className="flex items-center gap-1.5 text-gray-500">
                     <Clock size={13} />
-                    <input
-                      type="time"
-                      value={time}
-                      onChange={e => setTime(e.target.value)}
-                      className="text-sm bg-transparent border-0 focus:outline-none text-gray-600 w-24"
-                    />
+                    <input type="time" value={time ?? ''} onChange={e => setTime(e.target.value)}
+                      className="text-sm bg-transparent border-0 focus:outline-none text-gray-600 w-24" />
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Trennlinie */}
             <div className="flex items-center gap-3">
               <div className="w-8 flex-shrink-0 flex justify-center">
                 <div className="w-0.5 h-4 bg-gray-200" />
               </div>
             </div>
 
-            {/* Bis */}
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 flex-shrink-0" />
               <div className="flex-1 flex items-center gap-2">
                 <div className="flex-1">
                   <p className="text-xs text-gray-400 mb-0.5">Bis</p>
-                  <input
-                    type="date"
-                    value={endDate}
-                    min={startDate}
+                  <input type="date" value={endDate ?? ''} min={startDate}
                     onChange={e => setEndDate(e.target.value)}
-                    className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full"
-                  />
+                    className="text-sm font-medium text-gray-800 bg-transparent border-0 focus:outline-none w-full" />
                 </div>
                 {isMultiDay && (
                   <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium whitespace-nowrap">
@@ -157,34 +165,35 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
             </div>
           </div>
 
-          {/* Person */}
+          {/* Personen — Mehrfachauswahl */}
           <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Person</p>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+              Personen {selectedMembers.length > 1 && <span className="text-blue-500 normal-case">({selectedMembers.length} ausgewählt)</span>}
+            </p>
             <div className="flex flex-wrap gap-2">
-              {members.map(m => (
-                <button
-                  key={m.name}
-                  type="button"
-                  onClick={() => setMember(m.name)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
-                    member === m.name ? 'text-white shadow-sm' : 'text-gray-500 bg-gray-100 hover:bg-gray-200'
-                  }`}
-                  style={member === m.name ? { backgroundColor: m.color } : {}}
-                >
-                  {m.name}
-                </button>
-              ))}
+              {members.map(m => {
+                const active = selectedMembers.includes(m.name)
+                return (
+                  <button
+                    key={m.name}
+                    type="button"
+                    onClick={() => toggleMember(m.name)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border-2 ${
+                      active ? 'text-white shadow-sm' : 'text-gray-500 bg-gray-100 border-transparent hover:bg-gray-200'
+                    }`}
+                    style={active ? { backgroundColor: m.color, borderColor: m.color } : {}}
+                  >
+                    {m.name}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
           {/* Notizen */}
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Notizen (optional)..."
-            rows={2}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none text-gray-600 placeholder-gray-300"
-          />
+          <textarea value={notes ?? ''} onChange={e => setNotes(e.target.value)}
+            placeholder="Notizen (optional)..." rows={2}
+            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none text-gray-600 placeholder-gray-300" />
 
           {/* Buttons */}
           <div className="flex gap-3 pt-1">
@@ -194,7 +203,7 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
             </button>
             <button type="submit"
               className="flex-1 py-3 px-4 text-sm font-medium text-white rounded-xl transition-colors"
-              style={{ backgroundColor: selectedMember?.color }}>
+              style={{ background: makeGradient(selectedColors) }}>
               {event ? 'Speichern' : 'Hinzufügen'}
             </button>
           </div>
