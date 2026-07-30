@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { supabase, type Event } from '@/lib/supabase'
 import Calendar from '@/components/Calendar'
 import EventModal from '@/components/EventModal'
 import MembersModal from '@/components/MembersModal'
+import { getHolidays } from '@/lib/holidays'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Settings } from 'lucide-react'
@@ -29,6 +30,22 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
   const [preview, setPreview] = useState<Preview>(null)
+
+  // Generate holidays for current + next year
+  const holidays = useMemo<Event[]>(() => {
+    const year = new Date().getFullYear()
+    return [...getHolidays(year), ...getHolidays(year + 1)].map(h => ({
+      id: `holiday-${h.date}`,
+      title: h.title,
+      date: h.date,
+      member: '',
+      color: '#9ca3af',
+      is_holiday: true,
+      created_at: '',
+    }))
+  }, [])
+
+  const allEvents = useMemo(() => [...holidays, ...events], [holidays, events])
 
   useEffect(() => {
     loadMembers()
@@ -66,6 +83,7 @@ export default function Home() {
   }
 
   function handleEventClick(event: Event) {
+    if (event.is_holiday) return
     setEditEvent(event)
     setSelectedDate(new Date(event.date))
     setShowModal(true)
@@ -118,7 +136,7 @@ export default function Home() {
       </header>
 
       <Calendar
-        events={events}
+        events={allEvents}
         preview={preview}
         onDayClick={handleDayClick}
         onEventClick={handleEventClick}

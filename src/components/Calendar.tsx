@@ -88,11 +88,12 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
     isEnd: boolean
     isMulti: boolean
     isPreview: boolean
+    isHoliday?: boolean
     inMonth: boolean
     day: Date
     onClick?: (e: React.MouseEvent) => void
   }) {
-    const { key, colors, title, time, isStart, isEnd, isMulti, isPreview, inMonth, day, onClick } = opts
+    const { key, colors, title, time, isStart, isEnd, isMulti, isPreview, isHoliday, inMonth, day, onClick } = opts
     const roundLeft = !isMulti || isStart || isWeekStart(day)
     const roundRight = !isMulti || isEnd || isWeekEnd(day)
     const showTitle = !isMulti || isStart || isWeekStart(day)
@@ -108,6 +109,7 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
         className={`w-full text-left text-[10px] leading-[14px] py-px font-medium block overflow-hidden
           ${roundLeft ? 'rounded-l-full pl-1.5' : ''}
           ${roundRight ? 'rounded-r-full pr-1.5' : ''}
+          ${isHoliday ? 'italic' : ''}
         `}
         style={{
           background: bg,
@@ -188,9 +190,10 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
                     isEnd: isEndDay(event, day),
                     isMulti: isMultiDay(event),
                     isPreview: false,
+                    isHoliday: !!event.is_holiday,
                     inMonth,
                     day,
-                    onClick: e => { e.stopPropagation(); onEventClick(event) },
+                    onClick: event.is_holiday ? undefined : e => { e.stopPropagation(); onEventClick(event) },
                   })
                 )}
 

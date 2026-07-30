@@ -17,4 +17,5 @@ export type Event = {
   colors?: string[] | null
   notes?: string | null
   created_at: string
+  is_holiday?: boolean
 }

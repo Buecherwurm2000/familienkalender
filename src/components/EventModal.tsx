@@ -203,7 +203,7 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
             </button>
             <button type="submit"
               className="flex-1 py-3 px-4 text-sm font-medium text-white rounded-xl transition-colors"
-              style={{ background: makeGradient(selectedColors) }}>
+              style={{ backgroundColor: firstColor }}>
               {event ? 'Speichern' : 'Hinzufügen'}
             </button>
           </div>
