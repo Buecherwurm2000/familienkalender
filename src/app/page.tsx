@@ -8,7 +8,7 @@ import MembersModal from '@/components/MembersModal'
 import { getHolidays } from '@/lib/holidays'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { Settings, Heart } from 'lucide-react'
+import { Settings, UserRound } from 'lucide-react'
 import MuttiTermineModal from '@/components/MuttiTermineModal'
 
 export type Member = { id?: string; name: string; color: string; sort_order?: number }
@@ -130,19 +130,18 @@ export default function Home() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowMuttiTermine(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-opacity hover:opacity-90"
+            className="p-2 rounded-xl hover:opacity-80 transition-opacity"
             style={{ backgroundColor: members.find(m => m.name === 'Mama')?.color ?? '#ec4899' }}
+            title="Muttis Termine"
           >
-            <Heart size={16} fill="white" />
-            Muttis Termine
+            <UserRound size={18} color="white" />
           </button>
           <button
             onClick={() => setShowMembers(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-medium transition-colors"
+            className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
             title="Familienmitglieder verwalten"
           >
-            <Settings size={16} />
-            Mitglieder
+            <Settings size={18} />
           </button>
         </div>
       </header>

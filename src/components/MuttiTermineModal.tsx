@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase, type Event } from '@/lib/supabase'
-import { X, Plus, Trash2, Heart } from 'lucide-react'
+import { X, Plus, Trash2, UserRound } from 'lucide-react'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -33,7 +33,6 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
       .from('events')
       .select('*')
       .eq('member', 'Mama')
-      .eq('is_holiday', false)
       .order('date', { ascending: true })
     if (data) setTermine(data)
   }
@@ -78,7 +77,7 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <Heart size={20} style={{ color: mamaColor }} fill={mamaColor} />
+            <UserRound size={20} style={{ color: mamaColor }} />
             <h2 className="text-lg font-bold text-gray-800">Muttis Termine</h2>
           </div>
           <button
