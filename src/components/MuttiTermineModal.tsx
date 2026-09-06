@@ -23,6 +23,7 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
   const [termine, setTermine] = useState<Event[]>([])
   const [form, setForm] = useState<TerminForm>(EMPTY_FORM)
   const [showForm, setShowForm] = useState(false)
+  const [fehler, setFehler] = useState<string | null>(null)
 
   useEffect(() => {
     loadTermine()
@@ -39,22 +40,25 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
 
   async function handleSave() {
     if (!form.datum || !form.beschreibung.trim()) return
+    setFehler(null)
 
-    await supabase.from('events').insert({
+    const { error } = await supabase.from('events').insert({
       title: form.beschreibung.trim(),
       date: form.datum,
       time: form.uhrzeit || null,
       member: 'Mama',
       members: ['Mama'],
       color: mamaColor,
-      colors: [mamaColor],
-      notes: null,
-      is_holiday: false,
     })
+
+    if (error) {
+      setFehler(error.message)
+      return
+    }
 
     setForm(EMPTY_FORM)
     setShowForm(false)
-    loadTermine()
+    await loadTermine()
   }
 
   async function handleDelete(id: string) {
@@ -154,7 +158,7 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
               </div>
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => { setShowForm(false); setForm(EMPTY_FORM) }}
+                  onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setFehler(null) }}
                   className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   Abbrechen
@@ -168,6 +172,9 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
                   Speichern
                 </button>
               </div>
+              {fehler && (
+                <p className="text-xs text-red-500 text-center">{fehler}</p>
+              )}
             </div>
           )}
         </div>
