@@ -8,7 +8,8 @@ import MembersModal from '@/components/MembersModal'
 import { getHolidays } from '@/lib/holidays'
 import { format } from 'date-fns'
 import { de } from 'date-fns/locale'
-import { Settings } from 'lucide-react'
+import { Settings, Heart } from 'lucide-react'
+import MuttiTermineModal from '@/components/MuttiTermineModal'
 
 export type Member = { id?: string; name: string; color: string; sort_order?: number }
 
@@ -29,6 +30,7 @@ export default function Home() {
   const [editEvent, setEditEvent] = useState<Event | null>(null)
   const [showModal, setShowModal] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
+  const [showMuttiTermine, setShowMuttiTermine] = useState(false)
   const [preview, setPreview] = useState<Preview>(null)
 
   // Generate holidays for current + next year
@@ -125,14 +127,24 @@ export default function Home() {
             {format(new Date(), 'MMMM yyyy', { locale: de })}
           </p>
         </div>
-        <button
-          onClick={() => setShowMembers(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-medium transition-colors"
-          title="Familienmitglieder verwalten"
-        >
-          <Settings size={16} />
-          Mitglieder
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMuttiTermine(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-opacity hover:opacity-90"
+            style={{ backgroundColor: members.find(m => m.name === 'Mama')?.color ?? '#ec4899' }}
+          >
+            <Heart size={16} fill="white" />
+            Muttis Termine
+          </button>
+          <button
+            onClick={() => setShowMembers(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-medium transition-colors"
+            title="Familienmitglieder verwalten"
+          >
+            <Settings size={16} />
+            Mitglieder
+          </button>
+        </div>
       </header>
 
       <Calendar
@@ -151,6 +163,13 @@ export default function Home() {
           onDelete={handleDelete}
           onPreviewChange={setPreview}
           onClose={() => { setPreview(null); setShowModal(false) }}
+        />
+      )}
+
+      {showMuttiTermine && (
+        <MuttiTermineModal
+          mamaColor={members.find(m => m.name === 'Mama')?.color ?? '#ec4899'}
+          onClose={() => setShowMuttiTermine(false)}
         />
       )}
 
