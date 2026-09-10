@@ -24,6 +24,11 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
   const [form, setForm] = useState<TerminForm>(EMPTY_FORM)
   const [showForm, setShowForm] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
+  const [zeigeVergangene, setZeigeVergangene] = useState(false)
+
+  const heute = format(new Date(), 'yyyy-MM-dd')
+  const zukuenftige = termine.filter(t => t.date >= heute)
+  const vergangene = termine.filter(t => t.date < heute).reverse()
 
   useEffect(() => {
     loadTermine()
@@ -94,29 +99,22 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
 
         {/* Terminliste */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          {termine.length === 0 && !showForm && (
-            <p className="text-gray-400 text-sm text-center py-10">
-              Noch keine Termine eingetragen.
+          {zukuenftige.length === 0 && !showForm && (
+            <p className="text-gray-400 text-sm text-center py-6">
+              Keine bevorstehenden Termine.
             </p>
           )}
 
-          {termine.map(t => (
+          {zukuenftige.map(t => (
             <div key={t.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
-              <div
-                className="w-1.5 self-stretch rounded-full flex-shrink-0"
-                style={{ backgroundColor: mamaColor }}
-              />
+              <div className="w-1.5 self-stretch rounded-full flex-shrink-0" style={{ backgroundColor: mamaColor }} />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-gray-800 text-sm">{t.title}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {formatDatum(t.date)}
-                  {t.time ? ` · ${t.time} Uhr` : ''}
+                  {formatDatum(t.date)}{t.time ? ` · ${t.time} Uhr` : ''}
                 </p>
               </div>
-              <button
-                onClick={() => handleDelete(t.id)}
-                className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
-              >
+              <button onClick={() => handleDelete(t.id)} className="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5">
                 <Trash2 size={15} />
               </button>
             </div>
@@ -174,6 +172,36 @@ export default function MuttiTermineModal({ mamaColor, onClose }: Props) {
               </div>
               {fehler && (
                 <p className="text-xs text-red-500 text-center">{fehler}</p>
+              )}
+            </div>
+          )}
+
+          {/* Vergangene Termine */}
+          {vergangene.length > 0 && (
+            <div className="pt-2">
+              <button
+                onClick={() => setZeigeVergangene(v => !v)}
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors w-full text-center py-1"
+              >
+                {zeigeVergangene ? '▲ Vergangene ausblenden' : `▼ ${vergangene.length} vergangene Termine`}
+              </button>
+              {zeigeVergangene && (
+                <div className="mt-2 space-y-2">
+                  {vergangene.map(t => (
+                    <div key={t.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 opacity-50">
+                      <div className="w-1.5 self-stretch rounded-full flex-shrink-0 bg-gray-300" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-400 line-through">{t.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {formatDatum(t.date)}{t.time ? ` · ${t.time} Uhr` : ''}
+                        </p>
+                      </div>
+                      <button onClick={() => handleDelete(t.id)} className="text-gray-200 hover:text-red-300 transition-colors flex-shrink-0 mt-0.5">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
