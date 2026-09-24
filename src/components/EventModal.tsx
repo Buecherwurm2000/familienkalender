@@ -6,6 +6,7 @@ import { de } from 'date-fns/locale'
 import { X, Trash2, Calendar, Clock } from 'lucide-react'
 import type { Event } from '@/lib/supabase'
 import type { Preview } from '@/app/page'
+import type { CalendarId } from '@/components/KalenderSeite'
 
 type Member = { name: string; color: string }
 
@@ -13,11 +14,18 @@ type Props = {
   date: Date | null
   event: Event | null
   members: Member[]
+  calendarId: CalendarId
   onSave: (data: Omit<Event, 'id' | 'created_at'>) => void
   onDelete: (id: string) => void
   onClose: () => void
   onPreviewChange: (preview: Preview) => void
 }
+
+const KALENDER_OPTIONEN = [
+  { id: 'alle', label: 'Alle Kalender' },
+  { id: 'anja-simon', label: 'Anja & Simon' },
+  { id: 'mutti', label: 'Mutti-Kalender' },
+]
 
 function makeGradient(colors: string[]): string {
   if (colors.length === 0) return '#3b82f6'
@@ -27,7 +35,7 @@ function makeGradient(colors: string[]): string {
   return `linear-gradient(90deg, ${stops.join(', ')})`
 }
 
-export default function EventModal({ date, event, members, onSave, onDelete, onClose, onPreviewChange }: Props) {
+export default function EventModal({ date, event, members, calendarId, onSave, onDelete, onClose, onPreviewChange }: Props) {
   const defaultStart = date ? format(date, 'yyyy-MM-dd') : ''
 
   const initialMembers = event?.members?.length
@@ -42,6 +50,7 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
   const [time, setTime] = useState(event?.time ?? '')
   const [selectedMembers, setSelectedMembers] = useState<string[]>(initialMembers)
   const [notes, setNotes] = useState(event?.notes ?? '')
+  const [kalender, setKalender] = useState<string>(event ? (event.calendar ?? 'alle') : calendarId)
 
   const isMultiDay = endDate && endDate > startDate
   const selectedColors = selectedMembers.map(name => members.find(m => m.name === name)?.color ?? '#3b82f6')
@@ -78,6 +87,7 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
       color: firstColor,
       colors: selectedColors,
       notes: notes || undefined,
+      calendar: kalender,
     })
   }
 
@@ -194,6 +204,27 @@ export default function EventModal({ date, event, members, onSave, onDelete, onC
           <textarea value={notes ?? ''} onChange={e => setNotes(e.target.value)}
             placeholder="Notizen (optional)..." rows={2}
             className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none text-gray-600 placeholder-gray-300" />
+
+          {/* Kalender-Auswahl */}
+          <div>
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Sichtbar in</p>
+            <div className="flex flex-wrap gap-2">
+              {KALENDER_OPTIONEN.map(k => (
+                <button
+                  key={k.id}
+                  type="button"
+                  onClick={() => setKalender(k.id)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all border-2 ${
+                    kalender === k.id
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'text-gray-500 bg-gray-100 border-transparent hover:bg-gray-200'
+                  }`}
+                >
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Buttons */}
           <div className="flex gap-3 pt-1">

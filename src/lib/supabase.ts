@@ -18,4 +18,5 @@ export type Event = {
   notes?: string | null
   created_at: string
   is_holiday?: boolean
+  calendar?: string | null
 }
