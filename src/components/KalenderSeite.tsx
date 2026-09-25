@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import Link from 'next/link'
 import { supabase, type Event } from '@/lib/supabase'
 import Calendar from '@/components/Calendar'
 import EventModal from '@/components/EventModal'
@@ -24,11 +23,11 @@ const DEFAULT_MEMBERS: Member[] = [
   { name: 'Familie', color: '#8b5cf6', sort_order: 4 },
 ]
 
-const KALENDER = [
-  { id: 'alle' as CalendarId, label: 'Familie', href: '/' },
-  { id: 'anja-simon' as CalendarId, label: 'Anja & Simon', href: '/anja-simon' },
-  { id: 'mutti' as CalendarId, label: 'Mutti-Kalender', href: '/mutti' },
-]
+const KALENDER_LABELS: Record<CalendarId, string> = {
+  'alle': 'Familienkalender',
+  'anja-simon': 'Anja & Simon',
+  'mutti': 'Mutti-Kalender',
+}
 
 type Props = { calendarId: CalendarId }
 
@@ -80,8 +79,13 @@ export default function KalenderSeite({ calendarId }: Props) {
 
   async function loadEvents() {
     let query = supabase.from('events').select('*').order('date', { ascending: true })
-    if (calendarId !== 'alle') {
-      query = query.or(`calendar.eq.${calendarId},calendar.eq.alle,calendar.is.null`)
+    if (calendarId === 'anja-simon') {
+      query = query.eq('calendar', 'anja-simon')
+    } else if (calendarId === 'mutti') {
+      query = query.eq('member', 'Mama')
+    } else {
+      // Familie: alles außer anja-simon
+      query = query.or('calendar.neq.anja-simon,calendar.is.null')
     }
     const { data } = await query
     if (data) setEvents(data)
@@ -101,10 +105,12 @@ export default function KalenderSeite({ calendarId }: Props) {
   }
 
   async function handleSave(data: Omit<Event, 'id' | 'created_at'>) {
+    const calendar = calendarId === 'anja-simon' ? 'anja-simon' : 'alle'
+    const row = { ...data, calendar }
     if (editEvent) {
-      await supabase.from('events').update(data).eq('id', editEvent.id)
+      await supabase.from('events').update(row).eq('id', editEvent.id)
     } else {
-      await supabase.from('events').insert(data)
+      await supabase.from('events').insert(row)
     }
     setPreview(null)
     setShowModal(false)
@@ -128,7 +134,7 @@ export default function KalenderSeite({ calendarId }: Props) {
   }
 
   const mamaColor = members.find(m => m.name === 'Mama')?.color ?? '#ec4899'
-  const currentLabel = KALENDER.find(k => k.id === calendarId)!.label
+  const currentLabel = KALENDER_LABELS[calendarId]
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-6">
@@ -160,23 +166,6 @@ export default function KalenderSeite({ calendarId }: Props) {
         </div>
       </header>
 
-      {/* Kalender-Navigation */}
-      <nav className="mb-4 flex gap-2 flex-wrap">
-        {KALENDER.map(k => (
-          <Link
-            key={k.id}
-            href={k.href}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              k.id === calendarId
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            {k.label}
-          </Link>
-        ))}
-      </nav>
-
       <Calendar
         events={allEvents}
         preview={preview}
@@ -189,7 +178,6 @@ export default function KalenderSeite({ calendarId }: Props) {
           date={selectedDate}
           event={editEvent}
           members={members}
-          calendarId={calendarId}
           onSave={handleSave}
           onDelete={handleDelete}
           onPreviewChange={setPreview}
