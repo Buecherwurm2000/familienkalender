@@ -178,7 +178,7 @@ export default function Calendar({ events, preview, onDayClick, onEventClick }: 
                           `}
                           style={{ background: makeGradient(colors), color: 'white', opacity: inMonth ? 1 : 0.4 }}
                         >
-                          {event.time ? `${event.time} ` : ''}{event.title}
+                          {event.title}{event.time ? ` · ${event.time}` : ''}
                         </button>
                       )
                     })}
