@@ -1,0 +1,15 @@
+{
+  "name": "Mutti-Kalender",
+  "short_name": "Mutti",
+  "description": "Termine für Mutti",
+  "start_url": "/mutti",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#ec4899",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
